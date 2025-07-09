@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Vote</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <img src="/static/Logo/Vote.png" alt="Glory Vote Logo" class="site-logo">
+        <button class="get-ticket" id="getTicketBtn">Get Free Vote</button>
+        <div class="vote-count">
+    <i class="fas fa-vote-yea"></i>
+    <span id="voteTotal">0</span>
+    <span class="vote-text">Votes</span>
+</div>
+    </header>
+    
+    <main>
+        <section class="hero">
+            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80" alt="Earth" class="hero-image">
+            <div class="hero-content">
+                <h1>Global Qualifier Round</h1>
+                <p>Cast your FREE vote to help your country advance!</p>
+                <button class="get-ticket" id="heroVoteBtn">Get Your Free Vote</button>
+            </div>
+        </section>
+
+        <h2 class="section-title" id="ranks-section">Live Top 10 Countries</h2>
+        <div id="liveRankings"></div>
+
+        <section id="vote-section">
+            <h2 class="section-title">All Countries</h2>
+            <div class="countries-grid" id="countriesGrid"></div>
+        </section>
+
+        <nav>
+            <a href="#home-section" class="active">
+                <i class="fas fa-home"></i>
+                <span>Home</span>
+            </a>
+            <a href="#ranks-section">
+                <i class="fas fa-trophy"></i>
+                <span>Ranks</span>
+            </a>
+            <a href="#vote-section">
+                <i class="fas fa-globe"></i>
+                <span>Vote</span>
+            </a>
+            <a href="#about-section">
+                <i class="fas fa-info-circle"></i>
+                <span>About</span>
+            </a>
+        </nav>
+
+        <div class="modal" id="emailModal"> 
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Verify Your Email</h2>
+        <p>Enter your email to get your free vote:</p>
+        <input type="email" id="userEmail" placeholder="your@email.com">
+
+        <div style="margin-top: 10px;">
+            <input type="checkbox" id="emailConsent" required>
+            <label for="emailConsent">
+                I agree to receive promotional emails from Global Vote. Read our 
+                <a href="/privacy" target="_blank">Privacy Policy</a>
+            </label>
+        </div>
+
+        <!-- ✅ Make sure verifyEmail is triggered -->
+        <button class="confirm-vote" id="submitEmail" onclick="verifyEmail()">Submit</button>
+    </div>
+</div>
+
+
+        <div class="logo-container">
+            <img src="/static/Logo/Vote.png" alt="Global Vote Logo" class="site-logo">
+            <span class="logo-fallback">Global Vote</span>
+        </div>
+
+        <section id="about-section" style="padding: 20px 15px;">
+            <h2 class="section-title">About Global Vote</h2>
+            <p>Global Vote is a fun, non-scientific poll about country preferences.</p>
+            
+            <div style="background-color: var(--darker); padding: 15px; border-radius: 8px; margin-top: 20px;">
+                <h3 style="color: var(--accent); margin-bottom: 10px;">Legal Disclaimer</h3>
+                <p><strong>Important:</strong> This website is for entertainment purposes only.</p>
+                <p>Global Vote is not an official voting system and has no political or governmental affiliation.</p>
+                <p>The results of this poll do not represent actual geopolitical opinions.</p>
+                <p>By participating, you acknowledge this is a fictional voting system.</p>
+            </div>
+        </section>
+    </main>
+
+<div id="ticketAnimation" class="ticket-animation">
+    <div class="ticket-icon">🎫</div>
+    <h2>Vote Ticket Unlocked!</h2>
+    <p>Your voting power is ready!</p>
+</div>
+
+<div id="cookieConsent" style="background: #222; color: white; padding: 10px; position: fixed; bottom: 0; width: 100%; text-align: center; z-index: 1000;">
+  This website uses cookies to ensure you get the best experience. 
+  <button id="acceptCookies" style="margin-left: 15px; padding: 5px 10px;">Accept</button>
+</div>
+
+<script>
+  document.getElementById('acceptCookies').onclick = function() {
+    document.getElementById('cookieConsent').style.display = 'none';
+    localStorage.setItem('cookiesAccepted', 'true');
+  };
+  window.onload = function() {
+    if(localStorage.getItem('cookiesAccepted') === 'true'){
+      document.getElementById('cookieConsent').style.display = 'none';
+    }
+  };
+</script>
+
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-const backendURL = window.location.origin;
+const backendURL = 'https://global-vote.onrender.com';
 
 
 // ====== APP STATE ======

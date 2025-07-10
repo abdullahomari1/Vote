@@ -73,6 +73,9 @@ def home():
 @app.route('/subscribe', methods=['POST'])
 def subscribe():
     try:
+        if not BREVO_API_KEY:
+            return jsonify({'status': 'error', 'message': 'Server email configuration error. Please contact support.'}), 500
+
         data = load_data()
         email = request.get_json().get('email', '').strip().lower()
 
@@ -89,7 +92,7 @@ def subscribe():
                 brevo_error = brevo_response.json().get('message', brevo_response.text)
             except Exception:
                 brevo_error = brevo_response.text
-            
+
             print(f"⚠️ Brevo error: {brevo_error}")
             return jsonify({
                 'status': 'error',
@@ -100,13 +103,25 @@ def subscribe():
         data["emails"].append(email)
         save_data(data)
 
-        # ✅ Send welcome emavil
+        # ✅ Send welcome email
         welcome = get_welcome_email(email)
-        send_brevo_email( 
-    welcome['subject'],
-    welcome['message'],
-    email
-)
+        send_brevo_email(
+            welcome['subject'],
+            welcome['message'],
+            email
+        )
+
+        return jsonify({
+            'status': 'success',
+            'message': 'Subscription successful. Check your email!'
+        })
+
+    except Exception as e:
+        print(f"Subscribe error: {str(e)}")  # Log error for debugging
+        return jsonify({
+            'status': 'error',
+            'message': f'Subscription failed: {str(e)}'
+        }), 500
 
         return jsonify({
             'status': 'success',

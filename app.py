@@ -4,6 +4,7 @@ import json
 from pymongo import MongoClient
 import os
 from datetime import datetime
+import certifi
 
 app = Flask(__name__)
 # Update your CORS configuration in Flask:
@@ -19,8 +20,8 @@ BREVO_LIST_ID = 5  # or whatever your list number is
 EMAIL = "omariabdullah186@gmail.com"
 
 # MongoDB setup
-MONGO_URI = os.environ.get("MONGO_URI")  # Store your Atlas URI in Render env vars
-client = MongoClient(MONGO_URI)
+MONGO_URI = os.environ.get("MONGO_URI")
+client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = client["globalvote"]
 emails_col = db["emails"]
 votes_col = db["votes"]

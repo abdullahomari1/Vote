@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import json
+from pymongo import MongoClient
 import os
 from datetime import datetime
 
@@ -12,27 +13,23 @@ CORS(app, resources={
     r"/votes": {"origins": "*"}
 })
 
-DATA_FILE = "data.json"
+
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
 BREVO_LIST_ID = 5  # or whatever your list number is
 EMAIL = "omariabdullah186@gmail.com"
+
+# MongoDB setup
+MONGO_URI = os.environ.get("MONGO_URI")  # Store your Atlas URI in Render env vars
+client = MongoClient(MONGO_URI)
+db = client["globalvote"]
+emails_col = db["emails"]
+votes_col = db["votes"]
 
 
 @app.route('/privacy')
 def privacy():
     return render_template('privacy.html')
 
-# Load data from file
-def load_data():
-    if not os.path.exists(DATA_FILE):
-        return {"emails": [], "votes": {}, "last_email_sent": None}
-    with open(DATA_FILE, 'r') as f:
-        return json.load(f)
-
-# Save data to file
-def save_data(data):
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
 
 # Email templates
 def get_welcome_email(email):
@@ -138,7 +135,6 @@ def subscribe():
 @app.route('/vote', methods=['POST'])
 def vote():
     try:
-        data = load_data()
         email = request.get_json().get('email', '').strip().lower()
         country = request.get_json().get('country', '').strip()
         
@@ -148,24 +144,24 @@ def vote():
         if not country:
             return jsonify({'status': 'error', 'message': 'Country required'}), 400
             
-        if email not in data["emails"]:
+        if not emails_col.find_one({"email": email}):
             return jsonify({'status': 'error', 'message': 'Please subscribe first'}), 400
             
-        # Update vote count
-        data["votes"][country] = data["votes"].get(country, 0) + 1
-        save_data(data)
+        # Update vote count in MongoDB
+        votes_col.update_one({"country": country}, {"$inc": {"count": 1}}, upsert=True)
         
         # Send vote confirmation
         confirmation = get_vote_confirmation(email, country)
         send_brevo_email(
-    confirmation['subject'],
-    confirmation['message'],
-    email
-)
+            confirmation['subject'],
+            confirmation['message'],
+            email
+        )
         
+        votes = {v["country"]: v["count"] for v in votes_col.find()}
         return jsonify({
             'status': 'success',
-            'votes': data["votes"],
+            'votes': votes,
             'message': f'Vote for {country} recorded'
         })
         
@@ -175,41 +171,43 @@ def vote():
             'message': f'Voting failed: {str(e)}'
         }), 500
 
+
 @app.route('/votes', methods=['GET'])
 def get_votes():
-    data = load_data()
+    votes = {v["country"]: v["count"] for v in votes_col.find()}
+    total_votes = sum(votes.values())
+    unique_voters = emails_col.count_documents({})
     return jsonify({
         'status': 'success',
-        'votes': data["votes"],
-        'total_votes': sum(data["votes"].values()),
-        'unique_voters': len(data["emails"])
+        'votes': votes,
+        'total_votes': total_votes,
+        'unique_voters': unique_voters
     })
+
 
 @app.route('/send-newsletter', methods=['POST'])
 def send_newsletter():
     try:
-        data = load_data()
         subject = request.json.get('subject', '').strip()
         content = request.json.get('content', '').strip()
         
         if not subject or not content:
             return jsonify({'status': 'error', 'message': 'Subject and content required'}), 400
             
-        if not data["emails"]:
+        emails = [doc['email'] for doc in emails_col.find()]
+        if not emails:
             return jsonify({'status': 'error', 'message': 'No subscribers yet'}), 400
             
-        # Record newsletter time
-        data["last_email_sent"] = datetime.now().isoformat()
-        save_data(data)
+        last_email_sent = datetime.now().isoformat()
         
         # Send to all subscribers
-        for email in data["emails"]:
+        for email in emails:
             send_brevo_email(subject, content, email)
             
         return jsonify({
             'status': 'success',
-            'message': f'Newsletter sent to {len(data["emails"])} subscribers',
-            'last_sent': data["last_email_sent"]
+            'message': f'Newsletter sent to {len(emails)} subscribers',
+            'last_sent': last_email_sent
         })
         
     except Exception as e:
@@ -223,13 +221,10 @@ def unsubscribe():
     if request.method == 'POST':
         email = request.form.get('email', '').strip().lower()
 
-        # ✅ Remove from local data
-        data = load_data()
-        if email in data["emails"]:
-            data["emails"].remove(email)
-            save_data(data)
+        # Remove from MongoDB
+        emails_col.delete_one({"email": email})
 
-        # ✅ Remove from Brevo
+        # Remove from Brevo
         remove_from_brevo(email)
 
         return render_template('unsubscribed.html', email=email)

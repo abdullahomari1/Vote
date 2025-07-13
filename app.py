@@ -22,7 +22,7 @@ EMAIL = "omariabdullah186@gmail.com"
 # MongoDB setup
 MONGO_URI = os.environ.get("MONGO_URI")
 client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
-db = client["globalvote"]
+db = client["Global_Vote"]
 emails_col = db["emails"]
 votes_col = db["votes"]
 

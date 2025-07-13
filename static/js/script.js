@@ -389,7 +389,7 @@ function updateLiveRankings() {
 function castVote(countryName) {
     if (hasVoted) return;
 
-    const email = localStorage.getItem('userEmail');  // ✅ Pull email from localStorage
+    const email = localStorage.getItem('userEmail');
     if (!email) {
         alert("Please enter your email or subscribe before voting.");
         return;
@@ -398,7 +398,7 @@ function castVote(countryName) {
     fetch(`${backendURL}/vote`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, country: countryName })  // ✅ Send email + country
+        body: JSON.stringify({ email, country: countryName })
     })
     .then(res => res.json())
     .then(data => {
@@ -407,16 +407,27 @@ function castVote(countryName) {
             return;
         }
 
-        voteCounts[countryName] = (voteCounts[countryName] || 0) + 1;
-        localStorage.setItem('voteCounts', JSON.stringify(voteCounts));
-        
         hasVoted = true;
         localStorage.setItem('hasVoted', 'true');
-        
-        updateLiveRankings();
-        disableVoting();
-        updateVoteDisplay();
-        alert(`Voted for ${countryName}!`);
+
+        // Fetch latest votes from backend after voting
+        fetch(`${backendURL}/votes`)
+          .then(res => res.json())
+          .then(votesData => {
+              voteCounts = votesData.votes || {};
+              renderCountries();
+              updateLiveRankings();
+              updateVoteDisplay();
+              disableVoting();
+              alert(`Voted for ${countryName}!`);
+          })
+          .catch(err => {
+              console.error('Failed to fetch updated votes:', err);
+              updateLiveRankings();
+              disableVoting();
+              updateVoteDisplay();
+              alert(`Voted for ${countryName}!`);
+          });
     })
     .catch(err => {
         console.error("Vote failed:", err);

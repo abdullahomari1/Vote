@@ -73,13 +73,13 @@ def subscribe():
         if not BREVO_API_KEY:
             return jsonify({'status': 'error', 'message': 'Server email configuration error. Please contact support.'}), 500
 
-        data = load_data()
         email = request.get_json().get('email', '').strip().lower()
 
         if not email or '@' not in email:
             return jsonify({'status': 'error', 'message': 'Invalid email address'}), 400
 
-        if email in data["emails"]:
+        # Check if already subscribed in MongoDB
+        if emails_col.find_one({"email": email}):
             return jsonify({'status': 'success', 'message': 'Already subscribed'})
 
         # ✅ Add to Brevo first
@@ -96,9 +96,8 @@ def subscribe():
                 'message': f'Failed to add to mailing list: {brevo_error}'
             }), 500
 
-        # Only add to local storage if Brevo succeeds
-        data["emails"].append(email)
-        save_data(data)
+        # Add to MongoDB
+        emails_col.insert_one({"email": email, "subscribed_at": datetime.utcnow()})
 
         # ✅ Send welcome email
         welcome = get_welcome_email(email)
@@ -115,17 +114,6 @@ def subscribe():
 
     except Exception as e:
         print(f"Subscribe error: {str(e)}")  # Log error for debugging
-        return jsonify({
-            'status': 'error',
-            'message': f'Subscription failed: {str(e)}'
-        }), 500
-
-        return jsonify({
-            'status': 'success',
-            'message': 'Subscription successful. Check your email!'
-        })
-
-    except Exception as e:
         return jsonify({
             'status': 'error',
             'message': f'Subscription failed: {str(e)}'

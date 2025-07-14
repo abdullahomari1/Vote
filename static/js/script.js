@@ -544,3 +544,17 @@ fetch(`${backendURL}/votes`)
       updateLiveRankings();
     }
   });
+
+window.addEventListener('DOMContentLoaded', () => {
+    fetch(`${backendURL}/votes`)
+        .then(res => res.json())
+        .then(data => {
+            voteCounts = data.votes || {};
+            renderCountries();
+            updateLiveRankings();
+            updateVoteDisplay();
+        })
+        .catch(err => {
+            console.error('Failed to fetch votes:', err);
+        });
+});

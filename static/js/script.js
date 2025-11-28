@@ -1,4 +1,4 @@
-const backendURL = 'https://global-vote.onrender.com';
+const backendURL = 'https://www.globalvote.world';
 
 
 // ====== APP STATE ======
@@ -203,7 +203,7 @@ const countries = [
             { code: 'zm', name: 'Zambia' },
             { code: 'zw', name: 'Zimbabwe' }
         ];
-
+        
 
 // Initialize vote counts if empty
 if (Object.keys(voteCounts).length === 0) {
@@ -293,7 +293,6 @@ function showTicketAnimation() {
         alert("Email verified! You can now vote.");
     }, 3000);
 }
-
 function createConfetti() {
     const confetti = document.createElement('div');
     confetti.className = 'confetti';

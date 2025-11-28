@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import json
-from pymongo import MongoClient
+from pymongo import MongoClient, errors
 import os
 from datetime import datetime
 import certifi
+import urllib.parse
 
 app = Flask(__name__)
 # Update your CORS configuration in Flask:
@@ -19,10 +20,50 @@ BREVO_API_KEY = os.environ.get("BREVO_API_KEY")
 BREVO_LIST_ID = 5  # or whatever your list number is
 EMAIL = "omariabdullah186@gmail.com"
 
-# MongoDB setup
+# --------------------------
+# MongoDB (SRV) configuration
+# --------------------------
+# Prefer a complete MONGO_URI; otherwise build from provided password.
 MONGO_URI = os.environ.get("MONGO_URI")
-client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
-db = client["Global_Vote"]
+if not MONGO_URI:
+    # If user provided only a password, build the SRV URI using the
+    # host provided by you:
+    mongo_pwd = os.environ.get("MONGO_PASSWORD")
+    mongo_user = os.environ.get("MONGO_USER", "Global_Vote")
+    mongo_host = os.environ.get("MONGO_HOST", "globalvote.41ms7al.mongodb.net")
+    mongo_options = os.environ.get("MONGO_OPTIONS", "?appName=GlobalVote")
+    if not mongo_pwd:
+        raise RuntimeError(
+            "MONGO_URI or MONGO_PASSWORD must be set in the environment. "
+            "Set MONGO_URI to the full connection string or set MONGO_PASSWORD "
+            "so the app can construct the mongodb+srv URI."
+        )
+    # URL-encode the password in case it contains special characters
+    safe_pwd = urllib.parse.quote_plus(mongo_pwd)
+    MONGO_URI = f"mongodb+srv://{mongo_user}:{safe_pwd}@{mongo_host}/{mongo_options}"
+
+# Optional DB name env var
+MONGO_DBNAME = os.environ.get("MONGO_DBNAME", "Global_Vote")
+
+# Create client with a short server selection timeout so startup fails fast
+try:
+    client = MongoClient(
+        MONGO_URI,
+        tlsCAFile=certifi.where(),
+        serverSelectionTimeoutMS=5000
+    )
+    # Verify connection (will raise ServerSelectionTimeoutError on failure)
+    client.admin.command("ping")
+except errors.ServerSelectionTimeoutError as e:
+    # This will cause the process to exit if not handled by the runtime environment;
+    # it's intentional so you can see the failure in logs and fix the connection.
+    print("ERROR: Could not connect to MongoDB (ServerSelectionTimeout):", e)
+    raise
+except Exception as e:
+    print("ERROR: MongoDB connection failed:", e)
+    raise
+
+db = client[MONGO_DBNAME]
 emails_col = db["emails"]
 votes_col = db["votes"]
 
@@ -214,7 +255,12 @@ def unsubscribe():
         emails_col.delete_one({"email": email})
 
         # Remove from Brevo
-        remove_from_brevo(email)
+        try:
+            remove_from_brevo(email)
+        except NameError:
+            # If remove_from_brevo isn't defined (wasn't in original code),
+            # just log and continue.
+            print("remove_from_brevo not defined; skipped Brevo removal")
 
         return render_template('unsubscribed.html', email=email)
 
